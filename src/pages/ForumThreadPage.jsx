@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import apiClient from '../services/api';
 import { formatDistanceToNow } from 'date-fns';
+import { motion } from 'framer-motion';
 
 function ForumThreadPage() {
-  const { threadId } = useParams(); // Get thread ID from URL
+  const { threadId } = useParams();
   const [thread, setThread] = useState(null);
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,19 +19,17 @@ function ForumThreadPage() {
       setIsLoading(true);
       setError('');
       try {
-        // Use correct API endpoint, includes /api implicitly
         const response = await apiClient.get(`/forum/threads/${threadId}`);
         setThread(response.data);
-        setPosts(response.data.posts || []); // Set posts from response, ensure it's an array
+        setPosts(response.data.posts || []);
       } catch (err) {
-        console.error("Failed to fetch thread:", err);
-        setError('Could not load discussion. It might not exist or there was a server error.');
+        setError('Could not load discussion.');
       } finally {
         setIsLoading(false);
       }
     };
     fetchThread();
-  }, [threadId]); // Re-fetch if threadId changes
+  }, [threadId]);
 
   const handlePostSubmit = async (e) => {
     e.preventDefault();
@@ -39,83 +38,84 @@ function ForumThreadPage() {
     setPostError('');
     try {
       const response = await apiClient.post('/forum/posts', {
-        thread_id: parseInt(threadId, 10), // Ensure ID is integer
+        thread_id: parseInt(threadId, 10),
         content: newPostContent
       });
-      // Add new post to the list using the data from the API response
       setPosts(prev => [...prev, response.data]);
-      setNewPostContent(''); // Clear textarea
+      setNewPostContent('');
     } catch (err) {
-      console.error("Failed to post reply:", err);
-      setPostError(err.response?.data?.detail || 'Could not post reply. Please try again.');
+      setPostError(err.response?.data?.detail || 'Could not post reply.');
     } finally {
       setIsPosting(false);
     }
   };
 
-
-  if (isLoading) return <p className="text-center mt-8 text-text-secondary">Loading discussion...</p>;
-  if (error) return <p className="text-center mt-8 text-red-500 bg-red-100 p-4 rounded">{error}</p>;
-  if (!thread) return <p className="text-center mt-8 text-text-secondary">Discussion not found.</p>;
+  if (isLoading) return <p className="text-center mt-8">Loading discussion...</p>;
+  if (error) return <p className="text-center mt-8 text-red-500">{error}</p>;
+  if (!thread) return <p className="text-center mt-8">Discussion not found.</p>;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Link back to the forum list under /app */}
-      <Link to="/app/forum" className="text-primary hover:underline mb-4 block">&larr; Back to Forum</Link>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <Link to="/app/forum" className="text-primary hover:underline mb-4 block">&larr; Back to All Discussions</Link>
 
-      {/* Thread Title and Initial Post */}
-      <div className="bg-surface p-5 rounded-lg shadow mb-6 border-l-4 border-primary">
-        <h1 className="text-2xl md:text-3xl font-bold text-text-primary mb-2">{thread.title}</h1>
-        {/* Render content preserving whitespace */}
-        <p className="text-text-secondary whitespace-pre-wrap mb-3">{thread.content}</p>
-        <div className="text-xs text-gray-500">
-          Started by {thread.owner?.full_name || 'User'} • {formatDistanceToNow(new Date(thread.created_at), { addSuffix: true })}
+      {/* Main Thread Post */}
+      <div className="bg-surface p-6 rounded-xl shadow-md mb-6 border">
+        <h1 className="text-3xl font-bold text-text-primary mb-4">{thread.title}</h1>
+        <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-secondary text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
+                {thread.owner?.full_name ? thread.owner.full_name.charAt(0).toUpperCase() : 'A'}
+            </div>
+            <div className="flex-grow">
+                <p className="font-semibold text-text-primary">{thread.owner?.full_name || 'Anonymous'}</p>
+                <p className="text-xs text-text-secondary">{formatDistanceToNow(new Date(thread.created_at), { addSuffix: true })}</p>
+                <p className="text-text-secondary whitespace-pre-wrap mt-3">{thread.content}</p>
+            </div>
         </div>
       </div>
 
-      {/* Replies/Posts */}
-      <h2 className="text-xl md:text-2xl font-semibold text-text-primary mb-4">Replies ({posts.length})</h2>
-      <div className="space-y-4 mb-8">
+      {/* Replies */}
+      <div className="space-y-4">
         {posts.map(post => (
-          <div key={post.id} className="bg-surface p-4 rounded-lg shadow animate-fade-in"> {/* Added fade-in animation */}
-            {/* Render content preserving whitespace */}
-            <p className="text-text-secondary whitespace-pre-wrap">{post.content}</p>
-            <div className="text-xs text-gray-500 mt-2 text-right">
-              By {post.owner?.full_name || 'User'} • {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+          <div key={post.id} className="bg-surface p-4 rounded-lg shadow-sm flex items-start gap-4 border">
+             <div className="w-10 h-10 rounded-full bg-gray-200 text-text-primary flex items-center justify-center font-bold text-lg flex-shrink-0">
+                {post.owner?.full_name ? post.owner.full_name.charAt(0).toUpperCase() : 'A'}
+            </div>
+            <div className="flex-grow">
+                <div className="flex items-baseline gap-2">
+                    <p className="font-semibold text-text-primary">{post.owner?.full_name || 'Anonymous'}</p>
+                    <p className="text-xs text-text-secondary">{formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</p>
+                </div>
+                <p className="text-text-secondary whitespace-pre-wrap mt-1">{post.content}</p>
             </div>
           </div>
         ))}
-        {posts.length === 0 && !isLoading && (
-            <p className="text-text-secondary text-center py-4">No replies yet.</p>
-        )}
       </div>
 
       {/* Post Reply Form */}
-      <div className="bg-surface p-5 rounded-lg shadow mt-6 sticky bottom-4"> {/* Make reply sticky? */}
-        <h3 className="text-lg font-semibold text-text-primary mb-3">Post a Reply</h3>
-        {postError && <p className="text-red-500 bg-red-100 p-2 rounded mb-3 text-sm">{postError}</p>}
+      <div className="bg-surface p-5 rounded-lg shadow mt-8 border">
+        <h3 className="text-xl font-semibold text-text-primary mb-3">Post a Reply</h3>
+        {postError && <p className="text-red-500 text-sm mb-2">{postError}</p>}
         <form onSubmit={handlePostSubmit}>
           <textarea
             value={newPostContent}
             onChange={(e) => setNewPostContent(e.target.value)}
             rows="4"
-            className="w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-primary focus:border-primary text-sm"
+            className="w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-primary focus:border-primary"
             placeholder="Write your reply..."
             required
-            disabled={isPosting}
           ></textarea>
           <div className="text-right mt-3">
             <button
               type="submit"
               disabled={isPosting || !newPostContent.trim()}
-              className="py-2 px-5 rounded bg-primary text-white hover:bg-green-700 transition disabled:opacity-50 text-sm"
+              className="py-2 px-5 rounded-lg bg-primary text-white hover:bg-green-700 transition disabled:opacity-50 font-semibold"
             >
               {isPosting ? 'Posting...' : 'Post Reply'}
             </button>
           </div>
         </form>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

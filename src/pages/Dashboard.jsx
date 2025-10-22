@@ -1,122 +1,101 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
-import apiClient from '../services/api';
-import FarmFormModal from '../components/FarmFormModal';
+import { motion } from 'framer-motion';
+import { FiPlus, FiUpload } from 'react-icons/fi';
+import { LineChart, Line, ResponsiveContainer } from 'recharts';
+
+// Mock data for the small chart
+const chartData = [
+  { name: 'Mon', emissions: 120 }, { name: 'Tue', emissions: 150 },
+  { name: 'Wed', emissions: 100 }, { name: 'Thu', emissions: 180 },
+  { name: 'Fri', emissions: 130 }, { name: 'Sat', emissions: 200 },
+  { name: 'Sun', emissions: 170 },
+];
+
+const StatCard = ({ title, value, trend, icon, chartData, colorClass }) => (
+    <div className="bg-surface p-6 rounded-xl shadow-md flex flex-col">
+        <div className="flex justify-between items-start mb-4">
+            <div>
+                <p className="text-sm text-text-secondary font-medium">{title}</p>
+                <p className="text-3xl font-bold text-text-primary">{value}</p>
+                <p className={`text-xs font-semibold ${trend.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>{trend}</p>
+            </div>
+            <div className={`text-2xl p-3 rounded-full ${colorClass}`}>{icon}</div>
+        </div>
+        <div className="h-16 w-full mt-auto">
+            <ResponsiveContainer>
+                <LineChart data={chartData} margin={{ top: 5, right: 10, left: -40, bottom: 5 }}>
+                    <Line type="monotone" dataKey="emissions" stroke={colorClass.includes('green') ? '#22c55e' : '#3b82f6'} strokeWidth={2} dot={false} />
+                </LineChart>
+            </ResponsiveContainer>
+        </div>
+    </div>
+);
+
+const ActivityItem = ({ icon, text, time, color }) => (
+    <div className="flex items-center gap-4 py-3 border-b last:border-b-0">
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${color}`}>
+            {icon}
+        </div>
+        <div>
+            <p className="text-sm text-text-primary">{text}</p>
+            <p className="text-xs text-text-secondary">{time}</p>
+        </div>
+    </div>
+);
 
 function Dashboard() {
   const { user } = useAuth();
-  const [farms, setFarms] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(''); // Added error state
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  useEffect(() => {
-    const fetchFarms = async () => {
-      setIsLoading(true); // Set loading true at the start
-      setError(''); // Clear previous errors
-      try {
-        const response = await apiClient.get('/farms/'); // Fetch from /api/farms/
-        setFarms(response.data);
-      } catch (error) {
-        console.error("Failed to fetch farms:", error);
-        setError('Could not load your farms. Please try again later.'); // Set error message
-        setFarms([]); // Ensure farms is an array even on error
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchFarms();
-  }, []);
-
-  const handleFarmSaved = (savedFarm) => {
-    setFarms(prevFarms => {
-        const existingIndex = prevFarms.findIndex(farm => farm.id === savedFarm.id);
-        if (existingIndex !== -1) {
-            // Update existing farm
-            const updatedFarms = [...prevFarms];
-            updatedFarms[existingIndex] = savedFarm;
-            return updatedFarms;
-        } else {
-            // Add new farm
-            return Array.isArray(prevFarms) ? [...prevFarms, savedFarm] : [savedFarm];
-        }
-    });
-  };
-
+  
+  const recentActivities = [
+    { icon: '🔬', text: 'New soil scan uploaded for Sunrise Meadows Farm.', time: '2 hours ago', color: 'bg-green-100 text-green-600' },
+    { icon: '💡', text: 'AI recommended planting Corn in Field B-2.', time: 'Yesterday', color: 'bg-blue-100 text-blue-600' },
+    { icon: '🏅', text: "You earned the 'Water Saver' badge!", time: '3 days ago', color: 'bg-yellow-100 text-yellow-600' },
+    { icon: '🚜', text: 'Logged "Fertilizing" activity on Kianjogu Farm.', time: '4 days ago', color: 'bg-orange-100 text-orange-600' },
+  ];
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-text-primary">
-          Welcome, {user?.full_name || 'Farmer'}! {/* Added fallback name */}
-        </h1>
-        <div className="flex gap-4">
-
-          {/* --- FIX #1: Added /app prefix --- */}
-          <Link
-            to="/app/soil-analysis" // Changed from "/soil-analysis"
-            className="bg-accent text-white py-2 px-4 rounded hover:bg-orange-600 transition flex items-center gap-2" // Used accent color
-          >
-            🔬 Analyze Soil
-          </Link>
-          {/* --- End Fix --- */}
-
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="bg-primary text-white py-2 px-4 rounded hover:bg-green-700 transition flex items-center gap-2"
-          >
-           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg> Add New Farm
-          </button>
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+    >
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+            <div>
+                <h1 className="text-3xl font-bold text-text-primary">
+                    Welcome back, {user?.full_name || 'Alex'}!
+                </h1>
+                <p className="text-text-secondary mt-1">Here is a summary of your farms' activity.</p>
+            </div>
+            <div className="flex gap-4 mt-4 md:mt-0">
+                <Link to="/app/my-farms" className="bg-primary text-white py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-green-700 transition">
+                    <FiPlus /> Add/View Farms
+                </Link>
+                <Link to="/app/soil-analysis" className="bg-secondary text-white py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition">
+                    <FiUpload /> Upload Soil Data
+                </Link>
+            </div>
         </div>
-      </div>
 
-      <div>
-        <h2 className="text-2xl font-semibold text-text-primary mb-4">My Farms</h2> {/* Added margin-bottom */}
-        {isLoading ? (
-          <p className="mt-4 text-text-secondary">Loading farms...</p>
-        ) : error ? ( // Display error if fetch failed
-            <p className="mt-4 text-red-500 bg-red-100 p-4 rounded">{error}</p>
-        ) : farms && farms.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-            {farms.map((farm) => (
-              // --- FIX #2: Added /app prefix ---
-              <Link to={`/app/farms/${farm.id}`} key={farm.id}> {/* Changed from /farms/ */}
-              {/* --- End Fix --- */}
-                <div className="bg-surface p-6 rounded-lg shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between"> {/* Added h-full for alignment */}
-                  <div>
-                      <h3 className="font-bold text-lg text-primary mb-1">{farm.name}</h3>
-                      <p className="text-text-secondary text-sm">{farm.location_text}</p>
-                      <p className="text-sm mt-2 text-gray-500">{farm.size_acres} acres</p>
-                  </div>
-                  <span className="mt-4 text-primary font-semibold self-start">View Details →</span> {/* Adjusted link styling */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <StatCard title="Total Farms" value="12" trend="+2 this month" icon="🏞️" chartData={chartData} colorClass="bg-green-100 text-green-600" />
+            <StatCard title="Weekly Emission" value="1.2M kg" trend="+12%" icon="💨" chartData={chartData.slice().reverse()} colorClass="bg-red-100 text-red-600" />
+            <StatCard title="AI Crop Suggestions" value="5" trend="+1 new suggestion" icon="💡" chartData={chartData} colorClass="bg-blue-100 text-blue-600" />
+            <StatCard title="Badges Earned" value="8" trend="+1 new badge" icon="🏅" chartData={chartData.slice().reverse()} colorClass="bg-yellow-100 text-yellow-600" />
+        </div>
+
+        <div>
+            <h2 className="text-2xl font-semibold text-text-primary mb-4">Recent Activity</h2>
+            <div className="bg-surface rounded-xl shadow-md p-6">
+                <div className="space-y-2">
+                    {recentActivities.map((activity, index) => (
+                        <ActivityItem key={index} {...activity} />
+                    ))}
                 </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="mt-4 p-6 bg-surface rounded-lg shadow-md text-center">
-            <p className="text-text-secondary mb-4">You haven't added any farms yet.</p> {/* Added margin-bottom */}
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="bg-primary text-white py-2 px-4 rounded hover:bg-green-700 transition flex items-center gap-2 mx-auto" // Centered button
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg> Add Your First Farm
-            </button>
-          </div>
-        )}
-      </div>
-
-      <AnimatePresence>
-        {isModalOpen && (
-          <FarmFormModal
-            onClose={() => setIsModalOpen(false)}
-            onSave={handleFarmSaved}
-          />
-        )}
-      </AnimatePresence>
-    </div>
+            </div>
+        </div>
+    </motion.div>
   );
 }
 

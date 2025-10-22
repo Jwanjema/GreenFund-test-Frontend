@@ -7,13 +7,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        'primary': '#4CAF50',       // Main green
-        'secondary': '#FF6347',     // Tomato red (for carbon)
-        'accent': '#26A69A',        // A new, distinct Teal color (for the 'Analyze Soil' button)
-        'background': '#f4f4f5',    // Light gray (page background)
-        'surface': '#ffffff',       // White (for cards)
-        'text-primary': '#1a1a1a',  // Dark black (for headings)
-        'text-secondary': '#525252', // Lighter gray (for sub-text)
+        'primary': '#22c55e',       // A vibrant green (green-500)
+        'secondary': '#3b82f6',     // A calm blue (blue-500)
+        'accent': '#f97316',        // Orange for highlights
+        'background': '#f8fafc',    // Very light gray (slate-50)
+        'surface': '#ffffff',       // White for cards
+        'text-primary': '#1e293b',  // Dark gray/charcoal (slate-800)
+        'text-secondary': '#64748b', // Lighter gray (slate-500)
       },
     },
   },

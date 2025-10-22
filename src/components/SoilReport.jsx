@@ -1,37 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/api';
+import ReportCard from './ReportCard'; // 1. Import the new ReportCard component
 
 // --- Form for Manual Entry ---
 function ManualEntryForm({ farm, onReportAdded }) {
-  // --- THIS IS THE FIX ---
-  // Added the missing '=' sign
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // ----------------------
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
-    ph: 7.0,
-    nitrogen: 20,
-    phosphorus: 30,
-    potassium: 150,
-    moisture: 40,
+    ph: 7.0, nitrogen: 20, phosphorus: 30, potassium: 150, moisture: 40,
   });
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: parseFloat(value),
-    });
+    setFormData({ ...formData, [e.target.name]: parseFloat(e.target.value) });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
-
     try {
-      const newReportData = { farm_id: farm.id, ...formData };
-      const response = await apiClient.post('/soil/manual', newReportData);
+      const response = await apiClient.post('/soil/manual', { farm_id: farm.id, ...formData });
       onReportAdded(response.data);
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to save report.");
@@ -41,29 +29,30 @@ function ManualEntryForm({ farm, onReportAdded }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-background p-6 rounded-lg space-y-4">
+    <form onSubmit={handleSubmit} className="bg-surface p-6 rounded-xl shadow-md space-y-4 border">
+      <h3 className="font-bold text-lg text-text-primary">Enter Lab Results</h3>
       {error && <p className="text-red-500 text-sm">{error}</p>}
       <div>
         <label className="block text-sm font-medium text-text-secondary">Soil pH (0-14)</label>
-        <input type="number" step="0.1" name="ph" value={formData.ph} onChange={handleChange} className="w-full p-2 border rounded mt-1" disabled={isSubmitting} />
+        <input type="number" step="0.1" name="ph" value={formData.ph} onChange={handleChange} className="w-full p-2 border rounded-md mt-1" disabled={isSubmitting} />
       </div>
       <div>
         <label className="block text-sm font-medium text-text-secondary">Nitrogen (N) (ppm)</label>
-        <input type="number" step="1" name="nitrogen" value={formData.nitrogen} onChange={handleChange} className="w-full p-2 border rounded mt-1" disabled={isSubmitting} />
+        <input type="number" step="1" name="nitrogen" value={formData.nitrogen} onChange={handleChange} className="w-full p-2 border rounded-md mt-1" disabled={isSubmitting} />
       </div>
       <div>
         <label className="block text-sm font-medium text-text-secondary">Phosphorus (P) (ppm)</label>
-        <input type="number" step="1" name="phosphorus" value={formData.phosphorus} onChange={handleChange} className="w-full p-2 border rounded mt-1" disabled={isSubmitting} />
+        <input type="number" step="1" name="phosphorus" value={formData.phosphorus} onChange={handleChange} className="w-full p-2 border rounded-md mt-1" disabled={isSubmitting} />
       </div>
       <div>
         <label className="block text-sm font-medium text-text-secondary">Potassium (K) (ppm)</label>
-        <input type="number" step="1" name="potassium" value={formData.potassium} onChange={handleChange} className="w-full p-2 border rounded mt-1" disabled={isSubmitting} />
+        <input type="number" step="1" name="potassium" value={formData.potassium} onChange={handleChange} className="w-full p-2 border rounded-md mt-1" disabled={isSubmitting} />
       </div>
       <div>
         <label className="block text-sm font-medium text-text-secondary">Moisture (%)</label>
-        <input type="number" step="1" name="moisture" value={formData.moisture} onChange={handleChange} className="w-full p-2 border rounded mt-1" disabled={isSubmitting} />
+        <input type="number" step="1" name="moisture" value={formData.moisture} onChange={handleChange} className="w-full p-2 border rounded-md mt-1" disabled={isSubmitting} />
       </div>
-      <button type="submit" className="w-full bg-primary text-white py-2 px-4 rounded hover:bg-green-700 disabled:bg-gray-400" disabled={isSubmitting}>
+      <button type="submit" className="w-full bg-primary text-white py-2.5 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-400 font-semibold" disabled={isSubmitting}>
         {isSubmitting ? 'Analyzing...' : 'Analyze Soil'}
       </button>
     </form>
@@ -87,18 +76,12 @@ function ImageUploadForm({ farm, onReportAdded }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file) {
-      setError("Please select an image file first.");
-      return;
-    }
+    if (!file) { setError("Please select an image file."); return; }
     setError('');
     setIsSubmitting(true);
-
     const formData = new FormData();
     formData.append("file", file);
-
     try {
-      // Use the new, unique path here
       const response = await apiClient.post(`/soil/upload_soil_image/${farm.id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
@@ -113,24 +96,19 @@ function ImageUploadForm({ farm, onReportAdded }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-background p-6 rounded-lg space-y-4">
+    <form onSubmit={handleSubmit} className="bg-surface p-6 rounded-xl shadow-md space-y-4 border">
+      <h3 className="font-bold text-lg text-text-primary">Upload a Photo</h3>
       {error && <p className="text-red-500 text-sm">{error}</p>}
       <div>
-        <label className="block text-sm font-medium text-text-secondary">Upload Soil Image</label>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          className="w-full p-2 border rounded mt-1"
-          disabled={isSubmitting}
-        />
+        <label className="block text-sm font-medium text-text-secondary">Select Soil Image</label>
+        <input type="file" accept="image/*" onChange={handleFileChange} className="w-full p-2 border rounded-md mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-primary hover:file:bg-green-100" disabled={isSubmitting} />
       </div>
       {preview && (
-        <div className="text-center">
-          <img src={preview} alt="Soil preview" className="max-h-60 rounded-lg mx-auto" />
+        <div className="text-center p-2 border-dashed border-2 rounded-lg">
+          <img src={preview} alt="Soil preview" className="max-h-48 rounded-lg mx-auto" />
         </div>
       )}
-      <button type="submit" className="w-full bg-primary text-white py-2 px-4 rounded hover:bg-green-700 disabled:bg-gray-400" disabled={isSubmitting || !file}>
+      <button type="submit" className="w-full bg-primary text-white py-2.5 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-400 font-semibold" disabled={isSubmitting || !file}>
         {isSubmitting ? 'Analyzing Image...' : 'Analyze Soil Image'}
       </button>
     </form>
@@ -146,17 +124,13 @@ function SoilReport({ farm }) {
 
   useEffect(() => {
     if (!farm.id) return;
-
     const fetchReports = async () => {
       setIsLoading(true);
-      setError('');
       try {
         const response = await apiClient.get(`/soil/farm/${farm.id}`);
         setReports(response.data);
       } catch (err) {
-          setError("Could not load past reports.");
-          console.error("Failed to fetch soil reports:", err);
-          setReports([]); // Ensure reports is an array even on error
+        setError("Could not load past reports.");
       } finally {
         setIsLoading(false);
       }
@@ -165,88 +139,37 @@ function SoilReport({ farm }) {
   }, [farm.id]);
 
   const handleReportAdded = (newReport) => {
-     if (newReport && newReport.ai_analysis_text !== undefined) {
-         setReports([newReport, ...reports]);
-     } else {
-         console.log("Received confirmation or unexpected response:", newReport);
-     }
+    setReports(prev => [newReport, ...prev]);
   };
 
   return (
-    <div className="mt-8">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-        {/* --- LEFT SIDE: Input Forms with Tabs --- */}
-        <div>
-          <h2 className="text-2xl font-bold text-text-primary mb-4">New Soil Test</h2>
-          {/* Tab Headers */}
-          <div className="flex mb-4">
-            <button
-              className={`py-2 px-4 font-semibold ${activeTab === 'manual' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary'}`}
-              onClick={() => setActiveTab('manual')}
-            >
-              Enter Manually
-            </button>
-            <button
-              className={`py-2 px-4 font-semibold ${activeTab === 'image' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary'}`}
-              onClick={() => setActiveTab('image')}
-            >
-              Upload Image
-            </button>
-          </div>
-
-          {/* Tab Content */}
-          <div>
-            {activeTab === 'manual' && <ManualEntryForm farm={farm} onReportAdded={handleReportAdded} />}
-            {activeTab === 'image' && <ImageUploadForm farm={farm} onReportAdded={handleReportAdded} />}
-          </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* LEFT SIDE: Input Forms */}
+      <div>
+        <h2 className="text-2xl font-bold text-text-primary mb-4">Submit New Test</h2>
+        <div className="flex mb-4 border-b">
+          <button className={`py-2 px-4 font-semibold ${activeTab === 'manual' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary'}`} onClick={() => setActiveTab('manual')}>Enter Manually</button>
+          <button className={`py-2 px-4 font-semibold ${activeTab === 'image' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary'}`} onClick={() => setActiveTab('image')}>Upload Image</button>
         </div>
-
-        {/* --- RIGHT SIDE: Past Reports --- */}
         <div>
-          <h2 className="text-2xl font-bold text-text-primary mb-4">Past Reports</h2>
-          <div className="space-y-4 max-h-[600px] overflow-y-auto">
-            {isLoading ? (
-              <p>Loading reports...</p>
-            ) : error ? (
-              <p className="text-red-500">{error}</p>
-            ) : reports.length > 0 ? (
-              reports.map((report) => (
-                <div key={report.id || report.date} className="bg-background p-4 rounded-lg">
-                  <p className="font-bold text-text-primary">
-                    Report from: {new Date(report.date).toLocaleDateString()}
-                  </p>
-
-                  <div className="mt-2 p-3 bg-surface rounded">
-                    <p className="font-semibold text-text-primary">AI Analysis:</p>
-                    <p className="text-text-secondary text-sm mt-1">
-                        {report.ai_analysis_text || "Analysis not available"}
-                    </p>
-                  </div>
-
-                  <div className="mt-2 p-3 bg-surface rounded">
-                    <p className="font-semibold text-text-primary">Suggested Crops:</p>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {(report.suggested_crops && Array.isArray(report.suggested_crops)) ? (
-                        report.suggested_crops.map((crop, index) => (
-                          <span key={index} className="text-xs bg-secondary text-white px-2 py-0.5 rounded-full">
-                            {crop}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-xs text-text-secondary italic">
-                          No crops suggested
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                </div>
-              ))
-            ) : (
-              <p className="text-text-secondary">No soil reports submitted for this farm yet.</p>
-            )}
-          </div>
+          {activeTab === 'manual' && <ManualEntryForm farm={farm} onReportAdded={handleReportAdded} />}
+          {activeTab === 'image' && <ImageUploadForm farm={farm} onReportAdded={handleReportAdded} />}
+        </div>
+      </div>
+      {/* RIGHT SIDE: Past Reports */}
+      <div>
+        <h2 className="text-2xl font-bold text-text-primary mb-4">Past Reports</h2>
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+          {isLoading ? (
+            <p>Loading reports...</p>
+          ) : error ? (
+            <p className="text-red-500">{error}</p>
+          ) : reports.length > 0 ? (
+            // 2. Use the new ReportCard component here
+            reports.map((report) => <ReportCard key={report.id} report={report} />)
+          ) : (
+            <p className="text-text-secondary text-center py-10">No soil reports submitted for this farm yet.</p>
+          )}
         </div>
       </div>
     </div>

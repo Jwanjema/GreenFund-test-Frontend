@@ -1,7 +1,7 @@
 // src/App.jsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
-import { AnimatePresence } from 'framer-motion'; // Ensure this is imported if using animations
+import { AnimatePresence } from 'framer-motion';
 
 import AppLayout from './components/AppLayout';
 import PublicLayout from './components/PublicLayout';
@@ -9,69 +9,51 @@ import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import MyFarmsPage from './pages/MyFarmsPage';
 import FarmDetail from './pages/FarmDetail';
 import SoilHealthPage from './pages/SoilHealthPage';
 import SoilFarmSelection from './pages/SoilFarmSelection';
-// --- NEW: Import Forum Pages ---
 import ForumListPage from './pages/ForumListPage';
 import ForumThreadPage from './pages/ForumThreadPage';
-// --- End New ---
-
+import ChatbotPage from './pages/ChatbotPage'; // 1. Import new page
 
 function ProtectedRoute({ children }) {
   const { token } = useAuth();
-  // If no token, redirect to login, preserving the intended location
   return token ? children : <Navigate to="/login" replace />;
 }
 
-// Optional: Component to handle redirects for logged-in users on public pages
 function PublicRoute({ children }) {
     const { token } = useAuth();
     return token ? <Navigate to="/app/dashboard" replace /> : children;
 }
 
-
 function App() {
-  // No need for token here if using ProtectedRoute/PublicRoute correctly
-
   return (
     <Router>
-      <AnimatePresence mode="wait"> {/* Optional: For page transition animations */}
+      <AnimatePresence mode="wait">
         <Routes>
-          {/* --- PUBLIC ROUTES --- */}
+          {/* Public Routes */}
           <Route path="/" element={<PublicLayout />}>
             <Route index element={<PublicRoute><LandingPage /></PublicRoute>} />
             <Route path="login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route path="register" element={<PublicRoute><Register /></PublicRoute>} />
           </Route>
 
-          {/* --- PROTECTED ROUTES --- */}
-          <Route
-            path="/app"
-            element={
-              <ProtectedRoute>
-                <AppLayout />
-              </ProtectedRoute>
-            }
-          >
-            {/* Redirect /app to /app/dashboard */}
+          {/* Protected Routes */}
+          <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path="my-farms" element={<MyFarmsPage />} />
             <Route path="farms/:id" element={<FarmDetail />} />
-            <Route path="farms/:id/soil" element={<SoilHealthPage />} />
             <Route path="soil-analysis" element={<SoilFarmSelection />} />
-            {/* --- NEW: Forum Routes --- */}
+            <Route path="farms/:id/soil" element={<SoilHealthPage />} />
             <Route path="forum" element={<ForumListPage />} />
-            <Route path="forum/threads/:threadId" element={<ForumThreadPage />} /> {/* Route for single thread */}
-            {/* --- End New --- */}
-
-            {/* Optional: Catch-all for unknown routes within /app */}
-             <Route path="*" element={<Navigate to="dashboard" replace />} />
+            <Route path="forum/threads/:threadId" element={<ForumThreadPage />} />
+            <Route path="chatbot" element={<ChatbotPage />} /> {/* 2. Add new route */}
+            <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Route>
 
-          {/* Optional: Catch-all for unknown top-level routes */}
           <Route path="*" element={<Navigate to="/" replace />} />
-
         </Routes>
       </AnimatePresence>
     </Router>

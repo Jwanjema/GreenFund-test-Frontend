@@ -1,45 +1,60 @@
-// src/pages/FarmDetail.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import apiClient from '../services/api';
 import FarmFormModal from '../components/FarmFormModal';
 import WeatherForecast from '../components/WeatherForecast';
 import FarmMap from '../components/FarmMap';
 import ActivityLog from '../components/ActivityLog';
 import CarbonDashboard from '../components/CarbonDashboard';
+import ClimateActionSection from '../components/ClimateActionSection';
 import { Tabs, TabPanel } from '../components/Tabs';
-import ClimateActionSection from '../components/ClimateActionSection'; // Import the new component
+import { FiCloudDrizzle, FiTrendingUp, FiHeart } from 'react-icons/fi';
+
+// Reusable Stat Card for this page
+const FarmStatCard = ({ icon, title, value, unit }) => (
+    <div className="bg-background p-4 rounded-lg flex items-center gap-4">
+        <div className="text-2xl text-primary p-3 bg-green-100 rounded-full">{icon}</div>
+        <div>
+            <p className="text-sm text-text-secondary">{title}</p>
+            <p className="text-xl font-bold text-text-primary">
+                {value} <span className="text-sm font-normal">{unit}</span>
+            </p>
+        </div>
+    </div>
+);
 
 function FarmDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [farm, setFarm] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
+  const [carbonSummary, setCarbonSummary] = useState(null); // State for carbon data
   const [isLoading, setIsLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [error, setError] = useState('');
 
+  // Fetch all farm-specific data in parallel
   useEffect(() => {
-    const fetchFarm = async () => {
+    const fetchAllData = async () => {
       setIsLoading(true);
-      setError('');
       try {
-        const response = await apiClient.get(`/farms/${id}`);
-        setFarm(response.data);
+        const [farmRes, carbonRes] = await Promise.all([
+            apiClient.get(`/farms/${id}`),
+            apiClient.get(`/activities/farm/${id}/carbon_summary`)
+        ]);
+        setFarm(farmRes.data);
+        setCarbonSummary(carbonRes.data);
       } catch (error) {
         console.error("Failed to fetch farm details:", error);
-        setError('Could not load farm details. Please try again or go back.');
-        setFarm(null);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchFarm();
+    fetchAllData();
   }, [id]);
-
+  
   const handleForecastLoaded = useCallback((recs) => {
-    setRecommendations(recs || []); // Ensure recs is an array
+    setRecommendations(recs);
   }, []);
 
   const handleUpdate = (updatedFarm) => {
@@ -50,94 +65,69 @@ function FarmDetail() {
     if (window.confirm('Are you sure you want to delete this farm? This action cannot be undone.')) {
       try {
         await apiClient.delete(`/farms/${id}`);
-        navigate('/app/dashboard');
+        navigate('/app/my-farms');
       } catch (error) {
-        console.error('Failed to delete farm:', error);
-        alert('Could not delete the farm. Please try again.');
+        alert('Could not delete the farm.');
       }
     }
   };
 
   if (isLoading) return <p className="text-center mt-8">Loading farm details...</p>;
-  if (error) return <p className="text-center mt-8 text-red-500 bg-red-100 p-4 rounded">{error}</p>;
   if (!farm) return <p className="text-center mt-8">Farm not found.</p>;
 
   return (
-    <div>
-      <Link to="/app/dashboard" className="text-primary hover:underline mb-6 block">&larr; Back to Dashboard</Link>
-
-      <div className="bg-surface p-6 md:p-8 rounded-lg shadow-md">
-        {/* --- Farm Header --- */}
-        <div className="flex flex-col md:flex-row justify-between items-start mb-6 pb-6 border-b">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-text-primary">{farm.name}</h1>
-            <p className="text-md md:text-lg text-text-secondary mt-1">{farm.location_text}</p>
-          </div>
-          <div className="flex gap-2 mt-4 md:mt-0">
-            <button onClick={() => setIsEditModalOpen(true)} className="py-2 px-4 rounded bg-blue-500 text-white hover:bg-blue-600 text-sm">
-              Edit
-            </button>
-            <button onClick={handleDelete} className="py-2 px-4 rounded bg-red-500 text-white hover:bg-red-600 text-sm">
-              Delete
-            </button>
-          </div>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <Link to="/app/my-farms" className="text-primary hover:underline mb-6 block">&larr; Back to My Farms</Link>
+      
+      {/* --- HEADER --- */}
+      <div className="bg-surface p-6 rounded-lg shadow-md mb-6">
+        <div className="flex justify-between items-start">
+            <div>
+                <h1 className="text-3xl font-bold text-text-primary">{farm.name}</h1>
+                <p className="text-md text-text-secondary mt-1">{farm.location_text}</p>
+            </div>
+            <div className="flex gap-2">
+                <button onClick={() => setIsEditModalOpen(true)} className="py-2 px-4 rounded bg-secondary text-white hover:bg-blue-700 text-sm">Edit</button>
+                <button onClick={handleDelete} className="py-2 px-4 rounded bg-red-500 text-white hover:bg-red-600 text-sm">Delete</button>
+            </div>
         </div>
+      </div>
+      
+      {/* --- STATS GRID --- */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <FarmStatCard icon={<FiTrendingUp/>} title="Total Carbon Footprint" value={carbonSummary?.total_carbon_kg.toFixed(1) || '0'} unit="kg CO₂e" />
+        <FarmStatCard icon={<FiCloudDrizzle/>} title="Predicted Rainfall" value="15" unit="mm (next 7 days)" />
+        <FarmStatCard icon={<FiHeart/>} title="Soil Health Index" value="78" unit="/ 100" />
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div>
-            <p className="font-semibold text-text-secondary text-sm">Size</p>
-            <p className="text-text-primary">{farm.size_acres} acres</p>
-          </div>
-          <div>
-            <p className="font-semibold text-text-secondary text-sm">Coordinates</p>
-            <p className="text-text-primary text-sm">Lat: {farm.latitude?.toFixed(5)}, Long: {farm.longitude?.toFixed(5)}</p>
-          </div>
-        </div>
-
-        {/* --- Button to link to Soil Health Page --- */}
-        <div className="mb-8">
-          <Link
-            to={`/app/farms/${id}/soil`}
-            className="inline-flex items-center gap-2 bg-accent text-white py-2 px-4 rounded hover:bg-orange-600 transition"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 2h10v10H5V5zm2 1a1 1 0 00-1 1v1h8V7a1 1 0 00-1-1H7zm0 4a1 1 0 00-1 1v1h8v-1a1 1 0 00-1-1H7z"/></svg>
-             View/Add Soil Data
-          </Link>
-        </div>
-
-        {/* --- Tabbed Interface --- */}
-        <Tabs defaultIndex={0}> {/* Set a default tab */}
+      {/* --- TABBED INTERFACE --- */}
+      <div className="bg-surface p-6 rounded-lg shadow-md">
+        <Tabs>
           <TabPanel label="Overview">
-            {farm && <FarmMap farm={farm} />} {/* Ensure farm is loaded */}
-            {farm && <WeatherForecast farm={farm} onForecastLoaded={handleForecastLoaded} />} {/* Ensure farm is loaded */}
-            {recommendations && recommendations.length > 0 && (
+            <WeatherForecast farm={farm} onForecastLoaded={handleForecastLoaded} />
+            {recommendations.length > 0 && (
               <div className="mt-8">
-                <h2 className="text-xl font-bold text-text-primary mb-3">💡 Recommendations</h2>
+                <h2 className="text-xl font-bold text-text-primary mb-3">💡 AI Recommendations</h2>
                 <ul className="list-disc list-inside space-y-2 bg-background p-4 rounded-lg text-sm">
-                  {recommendations.map((rec, index) => (
-                    <li key={index} className="text-text-primary">{rec}</li>
-                  ))}
+                  {recommendations.map((rec, index) => <li key={index}>{rec}</li>)}
                 </ul>
               </div>
             )}
+             <FarmMap farm={farm} />
           </TabPanel>
-
+          
           <TabPanel label="Activity Log">
-             {farm && <ActivityLog farm={farm} />} {/* Ensure farm is loaded */}
+            <ActivityLog farm={farm} />
           </TabPanel>
 
           <TabPanel label="Carbon (CO₂e)">
-             {farm && <CarbonDashboard farm={farm} />} {/* Ensure farm is loaded */}
+            <CarbonDashboard farm={farm} />
           </TabPanel>
 
-          {/* --- NEW: Climate Action Tab --- */}
           <TabPanel label="Climate Action AI">
-             {farm && <ClimateActionSection farmId={farm.id} />} {/* Pass farmId */}
+             <ClimateActionSection farmId={farm.id} />
           </TabPanel>
-           {/* --- End New --- */}
-
         </Tabs>
-
       </div>
 
       <AnimatePresence>
@@ -149,7 +139,7 @@ function FarmDetail() {
           />
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }
 
