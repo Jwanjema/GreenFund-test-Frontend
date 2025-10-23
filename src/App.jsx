@@ -15,7 +15,8 @@ import SoilHealthPage from './pages/SoilHealthPage';
 import SoilFarmSelection from './pages/SoilFarmSelection';
 import ForumListPage from './pages/ForumListPage';
 import ForumThreadPage from './pages/ForumThreadPage';
-import ChatbotPage from './pages/ChatbotPage'; // 1. Import new page
+import ChatbotPage from './pages/ChatbotPage';
+import SettingsPage from './pages/SettingsPage'; // <-- 1. Import SettingsPage
 
 function ProtectedRoute({ children }) {
   const { token } = useAuth();
@@ -49,11 +50,12 @@ function App() {
             <Route path="farms/:id/soil" element={<SoilHealthPage />} />
             <Route path="forum" element={<ForumListPage />} />
             <Route path="forum/threads/:threadId" element={<ForumThreadPage />} />
-            <Route path="chatbot" element={<ChatbotPage />} /> {/* 2. Add new route */}
-            <Route path="*" element={<Navigate to="dashboard" replace />} />
+            <Route path="chatbot" element={<ChatbotPage />} />
+            <Route path="settings" element={<SettingsPage />} /> {/* <-- 2. Add route for settings */}
+            <Route path="*" element={<Navigate to="dashboard" replace />} /> {/* Catch-all *within* /app */}
           </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} /> {/* Overall catch-all */}
         </Routes>
       </AnimatePresence>
     </Router>
