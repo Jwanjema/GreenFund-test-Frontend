@@ -1,96 +1,110 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import apiClient from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext'; // 1. Import useAuth
+import { FiLogIn, FiLoader } from 'react-icons/fi';
+import toast from 'react-hot-toast';
 
 function Login() {
-  const [formData, setFormData] = useState({ username: '', password: '' });
-  const [error, setError] = useState(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  
+  // 2. Get the login function from the context
   const { login } = useAuth();
-  const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
+  // 3. Handle submit by calling the context 'login' function
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
+    if (!email || !password) {
+      toast.error('Please enter both email and password.');
+      return;
+    }
+    
+    setLoading(true);
     try {
-      // Create the form data body required by the backend
-      const formBody = new URLSearchParams();
-      formBody.append('username', formData.username);
-      formBody.append('password', formData.password);
-
-      // Post the login request
-      const response = await apiClient.post('/auth/login', formBody, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      });
-      
-      const { access_token } = response.data;
-      
-      // **THE FIX**: Manually provide the new token for this specific call.
-      // This is necessary because the token hasn't been saved to localStorage yet
-      // for the automatic interceptor to use.
-      const userResponse = await apiClient.get('/users/me', {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      });
-
-      // Now, update the global auth state, which saves the token for all future requests
-      login(access_token, userResponse.data);
-      
-      // Navigate to the main dashboard
-      navigate('/');
-      
-    } catch (err) {
-      setError(err.response?.data?.detail || 'An error occurred during login.');
+      // This 'login' function comes from AuthContext
+      // It will call /api/auth/token and handle navigation
+      await login(email, password);
+      // The context handles success/error toasts
+    } catch (error) {
+      // The context will show an error toast,
+      // but we catch any other unexpected errors here.
+      console.error('Login failed from Login.jsx', error);
+      toast.error("An unexpected error occurred.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="max-w-md w-full bg-surface p-8 rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold text-text-primary mb-6 text-center">
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+        <h2 className="text-3xl font-bold text-center text-primary">
           Login to GreenFund
         </h2>
-        <form onSubmit={handleSubmit}>
-          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-          
-          <div className="mb-4">
-            <label className="block text-text-secondary mb-2" htmlFor="username">Email</label>
+        
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div>
+            <label 
+              htmlFor="email" 
+              className="block text-sm font-medium text-gray-700"
+            >
+              Email address
+            </label>
             <input
+              id="email"
+              name="email"
               type="email"
-              name="username" // Must be 'username' for the backend
-              id="username"
-              onChange={handleChange}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              autoComplete="email"
               required
+              value={email}
+              // Use 'username' from your old form
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              placeholder="you@example.com"
             />
           </div>
-          <div className="mb-6">
-            <label className="block text-text-secondary mb-2" htmlFor="password">Password</label>
+
+          <div>
+            <label 
+              htmlFor="password" 
+              className="block text-sm font-medium text-gray-700"
+            >
+              Password
+            </label>
             <input
-              type="password"
-              name="password"
               id="password"
-              onChange={handleChange}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              name="password"
+              type="password"
+              autoComplete="current-password"
               required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              placeholder="••••••••"
             />
           </div>
-          <button
-            type="submit"
-            className="w-full bg-primary text-white py-2 rounded-lg hover:bg-green-700 transition duration-300"
-          >
-            Login
-          </button>
+
+          <div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
+            >
+              {loading ? (
+                <FiLoader className="animate-spin" />
+              ) : (
+                <FiLogIn className="mr-2" />
+              )}
+              {loading ? 'Logging in...' : 'Sign in'}
+            </button>
+          </div>
         </form>
-        <p className="text-center text-text-secondary mt-4">
+
+        <p className="text-sm text-center text-gray-600">
           Don't have an account?{' '}
-          <Link to="/register" className="text-primary hover:underline">
-            Register here
+          <Link to="/register" className="font-medium text-primary hover:text-green-700">
+            Sign up
           </Link>
         </p>
       </div>

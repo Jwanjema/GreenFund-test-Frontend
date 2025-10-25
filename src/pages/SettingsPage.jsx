@@ -1,21 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { FiUser, FiBell, FiLock, FiSave, FiLoader } from 'react-icons/fi';
-import { useAuth } from '../contexts/AuthContext'; // Ensure this path is correct (e.g., ../contexts/AuthContext)
-import api from '../services/api'; // Ensure this path is correct (e.g., ../services/api)
+import { FiUser, FiBell, FiLock, FiSave, FiLoader, FiMail, FiMapPin } from 'react-icons/fi'; // Added more icons
+import { useAuth } from '../contexts/AuthContext';
+import apiClient from '../services/api'; // Renamed to apiClient
 import toast from 'react-hot-toast';
 
 function SettingsPage() {
-  const { user, fetchUser } = useAuth(); // Assuming fetchUser updates the context
-  const [loading, setLoading] = useState(false);
+  const { user, fetchUser } = useAuth(); 
   
-  // State for the form fields
+  // State for the profile form
+  const [profileLoading, setProfileLoading] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
     location: '',
   });
 
-  // When the component loads, fill the form with the current user's data
+  // State for the password form
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwords, setPasswords] = useState({
+      old_password: '',
+      new_password: '',
+      confirm_password: ''
+  });
+
+  // When the component loads, fill the profile form
   useEffect(() => {
     if (user) {
       setFormData({
@@ -24,68 +32,100 @@ function SettingsPage() {
         location: user.location || '',
       });
     }
-  }, [user]); // Re-run if the user object changes
+  }, [user]); 
 
-  // Handle changes to form inputs
+  // Handle changes to profile form
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Handle form submission
+  // Handle changes to password form
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswords(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Handle profile form submission
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setProfileLoading(true);
     
-    // Filter out any fields that haven't changed
     const changes = {};
     if (formData.full_name !== user.full_name) changes.full_name = formData.full_name;
     if (formData.email !== user.email) changes.email = formData.email;
-    // Check for null vs empty string difference for location
     if (formData.location !== (user.location || '')) changes.location = formData.location;
-
 
     if (Object.keys(changes).length === 0) {
       toast.error("No changes to save.");
-      setLoading(false);
+      setProfileLoading(false);
       return;
     }
 
     try {
-      // Send PUT request to the new backend endpoint
-      const response = await api.put('/users/me', changes);
-      
-      // Update the user context with the new data
+      const response = await apiClient.put('/users/me', changes);
       if (fetchUser) {
-        fetchUser(); // This refetches the user and updates the context globally
+        fetchUser(); 
       }
-      
       toast.success("Profile updated successfully!");
-      
-      // Update form state in case fetchUser is async or not available
       setFormData({
         full_name: response.data.full_name || '',
         email: response.data.email || '',
         location: response.data.location || '',
       });
-
     } catch (err) {
       console.error("Failed to update profile:", err);
-      // Display specific error from backend if available
       toast.error(err.response?.data?.detail || "Failed to update profile.");
     } finally {
-      setLoading(false);
+      setProfileLoading(false);
     }
   };
   
-  // Placeholder for password change
-  const handlePasswordSubmit = (e) => {
+  // --- vvvv IMPLEMENTED PASSWORD SUBMIT vvvv ---
+  const handlePasswordSubmit = async (e) => {
       e.preventDefault();
-      toast.error("Password change is not yet implemented.");
-  };
+      
+      const { old_password, new_password, confirm_password } = passwords;
 
-  // Note: This component assumes it's rendered inside an AppLayout by the router
-  // It does NOT include the <Layout> component itself
+      // 1. Client-side validation
+      if (!old_password || !new_password || !confirm_password) {
+          toast.error("Please fill in all password fields.");
+          return;
+      }
+      if (new_password !== confirm_password) {
+          toast.error("New passwords do not match.");
+          return;
+      }
+      if (new_password.length < 8) {
+          toast.error("New password must be at least 8 characters long.");
+          return;
+      }
+
+      setPasswordLoading(true);
+      try {
+          // 2. Send to backend
+          await apiClient.post('/users/me/change-password', {
+              old_password: old_password,
+              new_password: new_password
+          });
+          
+          toast.success("Password updated successfully!");
+          // 3. Reset fields
+          setPasswords({
+              old_password: '',
+              new_password: '',
+              confirm_password: ''
+          });
+          
+      } catch (error) {
+          const detail = error.response?.data?.detail || "An error occurred.";
+          toast.error(detail);
+      } finally {
+          setPasswordLoading(false);
+      }
+  };
+  // --- ^^^^ END IMPLEMENTATION ^^^^ ---
+
   return (
     <div>
       <h1 className="text-3xl font-bold text-primary mb-6">Settings</h1>
@@ -112,7 +152,7 @@ function SettingsPage() {
         
         {/* Email */}
         <div className="flex items-center space-x-4 p-3">
-          <FiUser className="text-primary" size={20} /> {/* Consider using FiMail */}
+          <FiMail className="text-primary" size={20} /> {/* Changed icon */}
           <div className="flex-1">
             <label htmlFor="email" className="block text-sm font-medium text-gray-500">Email Address</label>
             <input
@@ -128,14 +168,14 @@ function SettingsPage() {
 
         {/* Location */}
         <div className="flex items-center space-x-4 p-3">
-          <FiUser className="text-primary" size={20} /> {/* Consider using FiMapPin */}
+          <FiMapPin className="text-primary" size={20} /> {/* Changed icon */}
           <div className="flex-1">
             <label htmlFor="location" className="block text-sm font-medium text-gray-500">Location</label>
             <input
               type="text"
               id="location"
               name="location"
-              value={formData.location || ''} // Ensure value is not null/undefined
+              value={formData.location || ''} 
               onChange={handleChange}
               placeholder="e.g., Nairobi, Kenya"
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
@@ -147,39 +187,71 @@ function SettingsPage() {
         <div className="flex justify-end pt-4 border-t">
           <button
             type="submit"
-            disabled={loading}
-            className={`bg-primary hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow flex items-center justify-center min-w-[120px] ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={profileLoading}
+            className={`bg-primary hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow flex items-center justify-center min-w-[120px] ${profileLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            {loading ? <FiLoader className="animate-spin" /> : <><FiSave className="mr-2" /> Save Changes</>}
+            {profileLoading ? <FiLoader className="animate-spin" /> : <><FiSave className="mr-2" /> Save Changes</>}
           </button>
         </div>
       </form>
       
-      {/* --- Password Change Form (Placeholder) --- */}
+      {/* --- Password Change Form (Now functional) --- */}
       <form onSubmit={handlePasswordSubmit} className="bg-white p-6 rounded-lg shadow-md space-y-6 mb-8">
         <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">Change Password</h2>
         <div className="flex items-center space-x-4 p-3">
           <FiLock className="text-primary" size={20} />
            <div className="flex-1">
-            <label htmlFor="current_pass" className="block text-sm font-medium text-gray-500">Current Password</label>
-            <input type="password" id="current_pass" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="************" />
+            <label htmlFor="old_password" className="block text-sm font-medium text-gray-500">Current Password</label>
+            <input 
+                type="password" 
+                id="old_password" 
+                name="old_password" // <-- Added name
+                value={passwords.old_password} // <-- Added value
+                onChange={handlePasswordChange} // <-- Added onChange
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" 
+                placeholder="************" 
+            />
           </div>
         </div>
          <div className="flex items-center space-x-4 p-3">
           <FiLock className="text-primary" size={20} />
            <div className="flex-1">
-            {/* --- THIS IS THE FIX --- */}
-            <label htmlFor="new_pass" className="block text-sm font-medium text-gray-500">New Password</label>
-            {/* --- END FIX --- */}
-            <input type="password" id="new_pass" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="************" />
+            <label htmlFor="new_password" className="block text-sm font-medium text-gray-500">New Password</label>
+            <input 
+                type="password" 
+                id="new_password" 
+                name="new_password" // <-- Added name
+                value={passwords.new_password} // <-- Added value
+                onChange={handlePasswordChange} // <-- Added onChange
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" 
+                placeholder="************" 
+            />
           </div>
         </div>
+        {/* --- vvvv ADDED CONFIRM PASSWORD vvvv --- */}
+        <div className="flex items-center space-x-4 p-3">
+          <FiLock className="text-primary" size={20} />
+           <div className="flex-1">
+            <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-500">Confirm New Password</label>
+            <input 
+                type="password" 
+                id="confirm_password" 
+                name="confirm_password" // <-- Added name
+                value={passwords.confirm_password} // <-- Added value
+                onChange={handlePasswordChange} // <-- Added onChange
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" 
+                placeholder="************" 
+            />
+          </div>
+        </div>
+        {/* --- ^^^^ END CONFIRM PASSWORD ^^^^ --- */}
          <div className="flex justify-end pt-4 border-t">
           <button
             type="submit"
-            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow flex items-center"
+            disabled={passwordLoading} // <-- Use passwordLoading
+            className={`bg-primary hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow flex items-center justify-center min-w-[170px] ${passwordLoading ? 'opacity-50 cursor-not-allowed' : ''}`} // <-- Use primary color
           >
-            <FiSave className="mr-2" /> Change Password
+            {passwordLoading ? <FiLoader className="animate-spin" /> : <><FiSave className="mr-2" /> Change Password</>}
           </button>
         </div>
       </form>

@@ -9,7 +9,8 @@ import {
     FiMessageSquare, 
     FiLogOut, 
     FiSettings,
-    FiCpu // AI/Bot icon
+    FiCpu, // AI/Bot icon
+    FiAward // <-- 1. Import the new icon
 } from 'react-icons/fi';
 
 function Sidebar() {
@@ -47,15 +48,18 @@ function Sidebar() {
                 <NavLink to="/app/forum" className={linkClasses}>
                     <FiMessageSquare /> Community
                 </NavLink>
-                {/* --- NEW: Chatbot Link --- */}
                 <NavLink to="/app/chatbot" className={linkClasses}>
                     <FiCpu /> AI Chatbot
                 </NavLink>
-                {/* --- END NEW --- */}
+                {/* --- 2. ADD THE NEW LINK --- */}
+                <NavLink to="/app/badges" className={linkClasses}>
+                    <FiAward /> My Badges
+                </NavLink>
+                {/* --- END NEW LINK --- */}
             </nav>
 
             <div className="mt-auto pt-4 border-t space-y-2">
-                <NavLink to="/app/settings" className={linkClasses}> {/* Placeholder */}
+                <NavLink to="/app/settings" className={linkClasses}>
                     <FiSettings /> Settings
                 </NavLink>
                 <button

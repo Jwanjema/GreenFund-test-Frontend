@@ -3,30 +3,32 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 import { AuthProvider } from './contexts/AuthContext.jsx';
-import { Toaster } from 'react-hot-toast'; // 1. Import Toaster
+import { Toaster } from 'react-hot-toast';
+import { BrowserRouter as Router } from 'react-router-dom'; // <-- Router is here
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <AuthProvider>
-      {/* 2. Add the Toaster component for notifications */}
-      <Toaster 
-        position="top-right"
-        toastOptions={{
-          success: {
-            style: {
-              background: '#22c55e', // primary green
-              color: 'white',
+    <Router> {/* <-- Router wraps everything */}
+      <AuthProvider>
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            success: {
+              style: {
+                background: '#22c55e',
+                color: 'white',
+              },
             },
-          },
-          error: {
-            style: {
-              background: '#ef4444', // red
-              color: 'white',
+            error: {
+              style: {
+                background: '#ef4444',
+                color: 'white',
+              },
             },
-          },
-        }}
-      />
-      <App />
-    </AuthProvider>
+          }}
+        />
+        <App />
+      </AuthProvider>
+    </Router>
   </React.StrictMode>
 );
